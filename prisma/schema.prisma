@@ -1,0 +1,247 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model roles {
+  role_id     Int      @id @default(autoincrement())
+  role_name   String
+  users       users[]
+}
+
+model users {
+  user_id       Int      @id @default(autoincrement())
+  role_id       Int
+  full_name     String
+  email         String   @unique
+  password      String
+  phone_number  String?
+  organization  String?
+  status        Boolean  @default(true)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  role          roles    @relation(fields: [role_id], references: [role_id])
+  campaigns     campaigns[]
+  donations     donations[]
+  reports       reports[]
+  login_logs    login_logs[]
+  activity_logs activity_logs[]
+}
+
+model locations {
+  location_id     Int      @id @default(autoincrement())
+  province        String
+  city            String
+  latitude        Float
+  longitude       Float
+  vegetation_rate String
+  tree_density    Int?
+  soil_type_id    Int?
+
+  soil_type       soil_types? @relation(fields: [soil_type_id], references: [soil_type_id])
+  suppliers       suppliers[]
+  campaigns       campaigns[]
+  ai_recommendations ai_recommendations[] // ✅ field balik dari ai_recommendations
+}
+
+model tree_types {
+  tree_type_id   Int      @id @default(autoincrement())
+  tree_name      String
+  description    String?
+  care_needs     String?
+  ai_recommendations ai_recommendations[]
+}
+
+model soil_types {
+  soil_type_id   Int      @id @default(autoincrement())
+  soil_name      String
+  characteristics String?
+  locations      locations[]
+}
+
+model suppliers {
+  supplier_id     Int      @id @default(autoincrement())
+  location_id     Int
+  supplier_name   String
+  contact         String?
+  stock           Int
+  price_per_unit  Float
+  created_at      DateTime @default(now())
+
+  location        locations @relation(fields: [location_id], references: [location_id])
+  ai_recommendations ai_recommendations[] // ✅ field balik dari ai_recommendations
+}
+model ai_recommendations {
+  ai_recommendation_id Int      @id @default(autoincrement())
+  location_id           Int
+  tree_type_id          Int
+  recommendation_note   String?
+  estimated_cost        Float?
+  supplier_id           Int?
+  created_at            DateTime @default(now())
+
+  location    locations    @relation(fields: [location_id], references: [location_id])
+  tree_type   tree_types   @relation(fields: [tree_type_id], references: [tree_type_id])
+  supplier    suppliers?   @relation(fields: [supplier_id], references: [supplier_id])
+}
+model campaigns {
+  campaign_id      Int      @id @default(autoincrement())
+  user_id          Int
+  location_id      Int
+  campaign_title   String
+  description      String?
+  target_trees     Int
+  start_date       DateTime
+  end_date         DateTime
+  status           String
+  created_at       DateTime @default(now())
+
+  user             users     @relation(fields: [user_id], references: [user_id])
+  location         locations @relation(fields: [location_id], references: [location_id])
+  documents        campaign_documents[]
+  progresses       campaign_progress[]
+  donations        donations[]
+  reports          reports[] // ✅ field balik dari reports
+}
+model campaign_documents {
+  campaign_document_id Int      @id @default(autoincrement())
+  campaign_id          Int
+  document_name        String
+  document_url         String
+  verified             Boolean  @default(false)
+
+  campaign             campaigns @relation(fields: [campaign_id], references: [campaign_id])
+}
+
+model campaign_progress {
+  campaign_progress_id Int      @id @default(autoincrement())
+  campaign_id          Int
+  current_trees        Int
+  percentage           Float
+  updated_at           DateTime @updatedAt
+
+  campaign             campaigns @relation(fields: [campaign_id], references: [campaign_id])
+}
+
+model donations {
+  donation_id     Int      @id @default(autoincrement())
+  user_id         Int
+  campaign_id     Int
+  amount          Float
+  method_id       Int
+  created_at      DateTime @default(now())
+
+  user            users     @relation(fields: [user_id], references: [user_id])
+  campaign        campaigns @relation(fields: [campaign_id], references: [campaign_id])
+  payment_method  payment_methods @relation(fields: [method_id], references: [method_id])
+  receipt         donation_receipts?
+  certificate     certificates?
+}
+model payment_methods {
+  method_id   Int      @id @default(autoincrement())
+  method_name String
+  donations   donations[]
+}
+
+model donation_receipts {
+  receipt_id    Int      @id @default(autoincrement())
+  donation_id   Int @unique
+  receipt_url   String
+  uploaded_at   DateTime @default(now())
+
+  donation      donations @relation(fields: [donation_id], references: [donation_id])
+}
+model reports {
+  report_id     Int      @id @default(autoincrement())
+  campaign_id   Int
+  user_id       Int
+  content       String?
+  created_at    DateTime @default(now())
+
+  campaign      campaigns @relation(fields: [campaign_id], references: [campaign_id])
+  user          users     @relation(fields: [user_id], references: [user_id])
+  photos        report_photos[]
+  verifications report_verifications[]
+}
+model report_photos {
+  report_photo_id Int      @id @default(autoincrement())
+  report_id       Int
+  photo_url       String
+  uploaded_at     DateTime @default(now())
+
+  report          reports @relation(fields: [report_id], references: [report_id])
+}
+
+model report_verifications {
+  report_verification_id Int      @id @default(autoincrement())
+  report_id              Int
+  verified_by            String?
+  verified_status        Boolean  @default(false)
+  verified_at            DateTime?
+
+  report                 reports @relation(fields: [report_id], references: [report_id])
+}
+
+model certificates {
+  certificate_id  Int      @id @default(autoincrement())
+  donation_id     Int      @unique // ✅ wajib unique karena one-to-one
+  certificate_url String
+  issued_at       DateTime @default(now())
+
+  donation        donations @relation(fields: [donation_id], references: [donation_id])
+}
+
+model news_posts {
+  news_post_id  Int      @id @default(autoincrement())
+  title         String
+  content       String?
+  image_url     String?
+  published_at  DateTime @default(now())
+}
+
+model login_logs {
+  login_log_id  Int      @id @default(autoincrement())
+  user_id       Int
+  ip_address    String?
+  login_time    DateTime @default(now())
+  logout_time   DateTime?
+
+  user          users @relation(fields: [user_id], references: [user_id])
+}
+
+model activity_logs {
+  activity_log_id Int      @id @default(autoincrement())
+  user_id         Int
+  action          String
+  created_at      DateTime @default(now())
+
+  user            users @relation(fields: [user_id], references: [user_id])
+}
+
+model verification_logs {
+  verification_log_id Int      @id @default(autoincrement())
+  reference_type      String
+  reference_id        Int
+  verified_by         String?
+  verified_status     Boolean  @default(false)
+  verified_at         DateTime?
+}
+
+model system_settings {
+  setting_id   Int      @id @default(autoincrement())
+  key          String   @unique
+  value        String
+  updated_at   DateTime @updatedAt
+}
