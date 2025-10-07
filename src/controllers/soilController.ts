@@ -8,18 +8,24 @@ import {
   UpdateSoilSchemaType,
   updateSoilTypeSchema,
 } from "../validators/soilValidator";
+import { handlePaginate } from "../helpers/handlePaginate";
 
 export const getAllSoil = async (c: Context) => {
   try {
-    const soils = await prisma.soil_types.findMany({
-      where: {
-        deleted_at: null,
-      },
-      orderBy: { soil_type_id: "asc" },
-    });
+    const page = parseInt(c.req.query("page") || "1", 10);
+    const perPage = parseInt(c.req.query("perPage") || "10", 10);
+    const search = c.req.query("search") || "";
 
-    if (!soils || soils.length === 0) {
-      return baseResponse.show(c, [], "No soil type found");
+    const soils = await handlePaginate(
+      prisma.soil_types,
+      {},
+      {},
+      page,
+      perPage
+    );
+
+    if (!soils) {
+      return baseResponse.error(c, "No soil type found");
     }
 
     return baseResponse.show(c, soils, "List of soil types");

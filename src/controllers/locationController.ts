@@ -8,7 +8,7 @@ import {
   CreateLocationType,
   updateLocationSchema,
   UpdateLocationType,
-} from "../validators/locationvalidator";
+} from "../validators/locationValidator";
 import { validateData } from "../validators/validator";
 
 export const getAllLocation = async (c: Context) => {
