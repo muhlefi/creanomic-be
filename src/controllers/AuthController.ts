@@ -61,8 +61,7 @@ export const login = async (c: Context) => {
       return baseResponse.error(c, "User not found", 404);
     }
 
-    const isValidPassword = await compare(password, user.password);
-    if (!isValidPassword) {
+    if (!(await compare(password, user.password))) {
       return baseResponse.error(c, "Invalid email or password", 401);
     }
 
@@ -77,5 +76,14 @@ export const login = async (c: Context) => {
     return baseResponse.show(c, { user: safeUser, token }, "Login successful");
   } catch (err: any) {
     return baseResponse.error(c, err?.message || "Internal server error", 500);
+  }
+};
+
+export const logout = async (c: Context) => {
+  try {
+    c.header("Set-Cookie", "token=; HttpOnly; Path=/; Max-Age=0");
+    return baseResponse.success(c, null, "Logout successful");
+  } catch (error) {
+    baseResponse.error(c, "Internal server error", 500);
   }
 };

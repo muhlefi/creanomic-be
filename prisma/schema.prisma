@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
   output   = "../src/generated/prisma"
@@ -18,6 +12,13 @@ model roles {
   role_id     Int      @id @default(autoincrement())
   role_name   String
   users       users[]
+
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  created_by  Int?
+  updated_by  Int?
+  deleted_at  DateTime?
+  deleted_by  Int?
 }
 
 model users {
@@ -31,6 +32,10 @@ model users {
   status        Boolean  @default(true)
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
+  created_by    Int?
+  updated_by    Int?
+  deleted_at    DateTime?
+  deleted_by    Int?
 
   role          roles    @relation(fields: [role_id], references: [role_id])
   campaigns     campaigns[]
@@ -53,7 +58,14 @@ model locations {
   soil_type       soil_types? @relation(fields: [soil_type_id], references: [soil_type_id])
   suppliers       suppliers[]
   campaigns       campaigns[]
-  ai_recommendations ai_recommendations[] // ✅ field balik dari ai_recommendations
+  ai_recommendations ai_recommendations[]
+
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  created_by  Int?
+  updated_by  Int?
+  deleted_at  DateTime?
+  deleted_by  Int?
 }
 
 model tree_types {
@@ -62,6 +74,13 @@ model tree_types {
   description    String?
   care_needs     String?
   ai_recommendations ai_recommendations[]
+
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  created_by  Int?
+  updated_by  Int?
+  deleted_at  DateTime?
+  deleted_by  Int?
 }
 
 model soil_types {
@@ -69,6 +88,13 @@ model soil_types {
   soil_name      String
   characteristics String?
   locations      locations[]
+
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  created_by  Int?
+  updated_by  Int?
+  deleted_at  DateTime?
+  deleted_by  Int?
 }
 
 model suppliers {
@@ -79,10 +105,16 @@ model suppliers {
   stock           Int
   price_per_unit  Float
   created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+  created_by      Int?
+  updated_by      Int?
+  deleted_at      DateTime?
+  deleted_by      Int?
 
   location        locations @relation(fields: [location_id], references: [location_id])
-  ai_recommendations ai_recommendations[] // ✅ field balik dari ai_recommendations
+  ai_recommendations ai_recommendations[]
 }
+
 model ai_recommendations {
   ai_recommendation_id Int      @id @default(autoincrement())
   location_id           Int
@@ -91,11 +123,17 @@ model ai_recommendations {
   estimated_cost        Float?
   supplier_id           Int?
   created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+  created_by            Int?
+  updated_by            Int?
+  deleted_at            DateTime?
+  deleted_by            Int?
 
   location    locations    @relation(fields: [location_id], references: [location_id])
   tree_type   tree_types   @relation(fields: [tree_type_id], references: [tree_type_id])
   supplier    suppliers?   @relation(fields: [supplier_id], references: [supplier_id])
 }
+
 model campaigns {
   campaign_id      Int      @id @default(autoincrement())
   user_id          Int
@@ -107,20 +145,32 @@ model campaigns {
   end_date         DateTime
   status           String
   created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+  created_by       Int?
+  updated_by       Int?
+  deleted_at       DateTime?
+  deleted_by       Int?
 
   user             users     @relation(fields: [user_id], references: [user_id])
   location         locations @relation(fields: [location_id], references: [location_id])
   documents        campaign_documents[]
   progresses       campaign_progress[]
   donations        donations[]
-  reports          reports[] // ✅ field balik dari reports
+  reports          reports[]
 }
+
 model campaign_documents {
   campaign_document_id Int      @id @default(autoincrement())
   campaign_id          Int
   document_name        String
   document_url         String
   verified             Boolean  @default(false)
+  created_at           DateTime @default(now())
+  updated_at           DateTime @updatedAt
+  created_by           Int?
+  updated_by           Int?
+  deleted_at           DateTime?
+  deleted_by           Int?
 
   campaign             campaigns @relation(fields: [campaign_id], references: [campaign_id])
 }
@@ -131,6 +181,11 @@ model campaign_progress {
   current_trees        Int
   percentage           Float
   updated_at           DateTime @updatedAt
+  created_at           DateTime @default(now())
+  created_by           Int?
+  updated_by           Int?
+  deleted_at           DateTime?
+  deleted_by           Int?
 
   campaign             campaigns @relation(fields: [campaign_id], references: [campaign_id])
 }
@@ -142,6 +197,11 @@ model donations {
   amount          Float
   method_id       Int
   created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+  created_by      Int?
+  updated_by      Int?
+  deleted_at      DateTime?
+  deleted_by      Int?
 
   user            users     @relation(fields: [user_id], references: [user_id])
   campaign        campaigns @relation(fields: [campaign_id], references: [campaign_id])
@@ -149,10 +209,18 @@ model donations {
   receipt         donation_receipts?
   certificate     certificates?
 }
+
 model payment_methods {
   method_id   Int      @id @default(autoincrement())
   method_name String
   donations   donations[]
+
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  created_by  Int?
+  updated_by  Int?
+  deleted_at  DateTime?
+  deleted_by  Int?
 }
 
 model donation_receipts {
@@ -160,26 +228,43 @@ model donation_receipts {
   donation_id   Int @unique
   receipt_url   String
   uploaded_at   DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  created_by    Int?
+  updated_by    Int?
+  deleted_at    DateTime?
+  deleted_by    Int?
 
   donation      donations @relation(fields: [donation_id], references: [donation_id])
 }
+
 model reports {
   report_id     Int      @id @default(autoincrement())
   campaign_id   Int
   user_id       Int
   content       String?
   created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  created_by    Int?
+  updated_by    Int?
+  deleted_at    DateTime?
+  deleted_by    Int?
 
   campaign      campaigns @relation(fields: [campaign_id], references: [campaign_id])
   user          users     @relation(fields: [user_id], references: [user_id])
   photos        report_photos[]
   verifications report_verifications[]
 }
+
 model report_photos {
   report_photo_id Int      @id @default(autoincrement())
   report_id       Int
   photo_url       String
   uploaded_at     DateTime @default(now())
+  updated_at      DateTime @updatedAt
+  created_by      Int?
+  updated_by      Int?
+  deleted_at      DateTime?
+  deleted_by      Int?
 
   report          reports @relation(fields: [report_id], references: [report_id])
 }
@@ -190,15 +275,26 @@ model report_verifications {
   verified_by            String?
   verified_status        Boolean  @default(false)
   verified_at            DateTime?
+  created_at             DateTime @default(now())
+  updated_at             DateTime @updatedAt
+  created_by             Int?
+  updated_by             Int?
+  deleted_at             DateTime?
+  deleted_by             Int?
 
   report                 reports @relation(fields: [report_id], references: [report_id])
 }
 
 model certificates {
   certificate_id  Int      @id @default(autoincrement())
-  donation_id     Int      @unique // ✅ wajib unique karena one-to-one
+  donation_id     Int      @unique
   certificate_url String
   issued_at       DateTime @default(now())
+  updated_at      DateTime @updatedAt
+  created_by      Int?
+  updated_by      Int?
+  deleted_at      DateTime?
+  deleted_by      Int?
 
   donation        donations @relation(fields: [donation_id], references: [donation_id])
 }
@@ -209,6 +305,11 @@ model news_posts {
   content       String?
   image_url     String?
   published_at  DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  created_by    Int?
+  updated_by    Int?
+  deleted_at    DateTime?
+  deleted_by    Int?
 }
 
 model login_logs {
@@ -217,6 +318,11 @@ model login_logs {
   ip_address    String?
   login_time    DateTime @default(now())
   logout_time   DateTime?
+  updated_at    DateTime @updatedAt
+  created_by    Int?
+  updated_by    Int?
+  deleted_at    DateTime?
+  deleted_by    Int?
 
   user          users @relation(fields: [user_id], references: [user_id])
 }
@@ -226,6 +332,11 @@ model activity_logs {
   user_id         Int
   action          String
   created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+  created_by      Int?
+  updated_by      Int?
+  deleted_at      DateTime?
+  deleted_by      Int?
 
   user            users @relation(fields: [user_id], references: [user_id])
 }
@@ -237,6 +348,12 @@ model verification_logs {
   verified_by         String?
   verified_status     Boolean  @default(false)
   verified_at         DateTime?
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+  created_by          Int?
+  updated_by          Int?
+  deleted_at          DateTime?
+  deleted_by          Int?
 }
 
 model system_settings {
@@ -244,4 +361,9 @@ model system_settings {
   key          String   @unique
   value        String
   updated_at   DateTime @updatedAt
+  created_at   DateTime @default(now())
+  created_by   Int?
+  updated_by   Int?
+  deleted_at   DateTime?
+  deleted_by   Int?
 }
