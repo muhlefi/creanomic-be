@@ -34,4 +34,6 @@ export const baseResponse = {
     }
     return c.json({ success: false, message: errorMessage }, status as any);
   },
+  unauthorized: (c: Context) =>
+    c.json({ success: false, message: "Unauthorized" }, 401),
 };

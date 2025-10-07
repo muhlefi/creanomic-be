@@ -19,6 +19,6 @@ export type RegisterType = z.infer<typeof registerSchema>;
 
 export const loginSchema = z.object({
   email: z.string().email(),
-  username: z.string().min(4),
+  password: z.string().min(8),
 });
 export type LoginType = z.infer<typeof loginSchema>;
