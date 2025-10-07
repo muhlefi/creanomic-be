@@ -1,5 +1,5 @@
 import { Context, Hono } from "hono";
-import { AuthMiddleware } from "../middlewares/AuthMiddleware";
+import { AuthMiddleware } from "../middlewares/authMiddleware";
 import { baseResponse } from "../helpers/baseResponse";
 
 export const userRoutes = new Hono();
