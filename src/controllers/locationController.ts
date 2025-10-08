@@ -1,155 +1,138 @@
-import { Context } from 'hono'
-import { z } from 'zod';
+import { Context } from "hono";
+import { z } from "zod";
 import { prisma } from "../utils/prisma";
-import { baseResponse } from '../helpers/baseResponse';
-import { handlePaginate } from '../helpers/handlePaginate';
+import { baseResponse } from "../helpers/baseResponse";
+import { handlePaginate } from "../helpers/handlePaginate";
+import {
+  createLocationSchema,
+  CreateLocationType,
+  updateLocationSchema,
+  UpdateLocationType,
+} from "../validators/locationValidator";
+import { validateData } from "../validators/validator";
 
 export const getAllLocation = async (c: Context) => {
-    try {
-        const page = parseInt(c.req.query('page') || '1', 10)
-        const perPage = parseInt(c.req.query('perPage') || '10', 10)
-        const search = c.req.query('search') || ''
+  try {
+    const page = parseInt(c.req.query("page") || "1", 10);
+    const perPage = parseInt(c.req.query("perPage") || "10", 10);
+    const search = c.req.query("search") || "";
 
-        const result = await handlePaginate(
-            prisma.locations,
-            {},
-            {},
-            page,
-            perPage
-        )
+    const result = await handlePaginate(
+      prisma.locations,
+      {},
+      {},
+      page,
+      perPage
+    );
 
-        return baseResponse.success(c, result)
-    } catch (e: unknown) {
-        return baseResponse.error(c, `Error: ${e instanceof Error ? e.message : 'Unknown error'}`)
+    return baseResponse.success(c, result);
+  } catch (e: unknown) {
+    return baseResponse.error(
+      c,
+      `Error: ${e instanceof Error ? e.message : "Unknown error"}`
+    );
+  }
+};
+
+export const getLocationById = async (c: Context) => {
+  try {
+    const id = c.req.param("id");
+    const location = await prisma.locations.findUnique({
+      where: { location_id: Number(id) },
+    });
+
+    if (!location) {
+      return baseResponse.error(c, "Location not found", 404);
     }
-}
 
-// export const showJenisById = async (c: Context) => {
-//     try {
-//         const id = c.req.param('id');
-//         const jenis = await prisma.jenis.findUnique({
-//             where: {
-//                 id_jenis: Number(id),
-//                 deleted_at: null
-//             }
-//         });
+    return baseResponse.show(c, location);
+  } catch (e: unknown) {
+    return baseResponse.error(
+      c,
+      `Error: ${e instanceof Error ? e.message : "Unknown error"}`
+    );
+  }
+};
 
-//         if (!jenis) {
-//             return baseResponse.error(c, 'Jenis not found');
-//         }
+export const createLocation = async (c: Context) => {
+  try {
+    const user = c.get("user");
+    if (!user?.user_id) return baseResponse.unauthorized(c);
 
-//         return baseResponse.show(c, jenis);
+    const body: CreateLocationType = await c.req.json();
+    const { data, error } = validateData(createLocationSchema, body);
+    if (error) return baseResponse.error(c, JSON.stringify(error), 400);
 
-//     } catch (e: unknown) {
-//         return baseResponse.error(c, `${e}`);
-//     }
-// }
+    const location = await prisma.locations.create({
+      data: { ...data, created_by: user.user_id },
+    });
+    return baseResponse.created(c, location);
+  } catch (_) {
+    return baseResponse.error(c, "Internal Server Error");
+  }
+};
 
-// export async function createJenis(c: Context) {
-//     try {
-//         const body = await c.req.json();
-//         const rules = z.object({
-//             nama: z.string().min(1),
-//             kode: z.string().min(1).regex(/^[^\s]+$/, { message: 'Code should not contain space' }),
-//             keterangan: z.string().optional()
-//         }).parse(body);
+export const updateLocation = async (c: Context) => {
+  try {
+    const user = c.get("user");
+    if (!user?.user_id) return baseResponse.unauthorized(c);
 
-//         if (await prisma.jenis.findFirst({ where: { kode_jenis: rules.kode, deleted_at: null } })) {
-//             return baseResponse.error(c, 'Jenis code is already used.');
-//         }
+    const id = Number(c.req.param("id"));
+    if (isNaN(id)) return baseResponse.error(c, "Invalid location ID", 400);
 
-//         const jenis = await prisma.jenis.create({
-//             data: {
-//                 nama_jenis: rules.nama,
-//                 kode_jenis: rules.kode,
-//                 keterangan: rules.keterangan,
-//                 created_at: new Date(),
-//                 updated_at: new Date()
-//             }
-//         });
+    const body: UpdateLocationType = await c.req.json();
+    const { data, error } = validateData(updateLocationSchema, body);
+    if (error) return baseResponse.error(c, JSON.stringify(error), 400);
 
-//         if (jenis) {
-//             return baseResponse.created(c, jenis);
-//         } else {
-//             return baseResponse.error(c, 'Failed to create jenis');
-//         }
+    const existing = await prisma.locations.findFirst({
+      where: { location_id: id, deleted_at: null },
+    });
+    if (!existing) return baseResponse.error(c, "Location not found", 404);
 
-//     } catch (e: unknown) {
-//         return baseResponse.error(c, `${e}`);
-//     }
-// }
+    const location = await prisma.locations.update({
+      where: { location_id: id },
+      data: {
+        ...data,
+        updated_by: user.user_id,
+      },
+      include: {
+        soil_type: {
+          select: { soil_type_id: true, soil_name: true },
+        },
+      },
+    });
 
-// export async function updateJenis(c: Context) {
-//     try {
-//         const id = parseInt(c.req.param('id'));
-//         const body = await c.req.json();
-//         const rules = z.object({
-//             nama: z.string().min(1),
-//             kode: z.string().min(1).regex(/^[^\s]+$/, { message: 'Code should not contain space' }),
-//             keterangan: z.string().optional()
-//         }).parse(body);
+    return baseResponse.updated(c, location);
+  } catch (error) {
+    console.error("updateLocation error:", error);
+    return baseResponse.error(c, "Internal Server Error", 500);
+  }
+};
 
-//         if (await prisma.jenis.findFirst({ where: { kode_jenis: rules.kode, id_jenis: { not: id }, deleted_at: null } })) {
-//             return baseResponse.error(c, 'Jenis code is already used.');
-//         }
+export const deleteLocation = async (c: Context) => {
+  try {
+    const user = c.get("user");
+    if (!user?.user_id) return baseResponse.unauthorized(c);
 
-//         const jenis = await prisma.jenis.update({
-//             where: { id_jenis: id },
-//             data: {
-//                 nama_jenis: rules.nama,
-//                 kode_jenis: rules.kode,
-//                 keterangan: rules.keterangan,
-//                 updated_at: new Date()
-//             }
-//         });
+    const id = Number(c.req.param("id"));
+    if (isNaN(id)) return baseResponse.error(c, "Invalid location ID", 400);
 
-//         if (jenis) {
-//             return baseResponse.updated(c, jenis);
-//         } else {
-//             return baseResponse.error(c, 'Failed to update jenis');
-//         }
+    const existing = await prisma.locations.findFirst({
+      where: { location_id: id, deleted_at: null },
+    });
+    if (!existing) return baseResponse.error(c, "Location not found", 404);
 
-//     } catch (e: unknown) {
-//         return baseResponse.error(c, `${e}`);
-//     }
-// }
+    await prisma.locations.update({
+      where: { location_id: id },
+      data: {
+        deleted_at: new Date(),
+        deleted_by: user.user_id,
+      },
+    });
 
-// export async function deleteJenis(c: Context) {
-//     try {
-//         const id = parseInt(c.req.param('id'));
-//         const jenis = await prisma.jenis.update({
-//             where: { id_jenis: id },
-//             data: {
-//                 deleted_at: new Date()
-//             }
-//         });
-
-//         if (jenis) {
-//             return baseResponse.deleted(c);
-//         } else {
-//             return baseResponse.error(c, 'Failed to delete jenis');
-//         }
-
-//     } catch (e: unknown) {
-//         return baseResponse.error(c, `${e}`);
-//     }
-// }
-
-// export async function getCombobox(c: Context) {
-//     try {
-//         const jenis = await prisma.jenis.findMany({
-//             select: { id_jenis: true, nama_jenis: true },
-//             where: { deleted_at: null },
-//             orderBy: { id_jenis: 'desc' },
-//         });
-
-//         const formattedJenis = jenis.map(j => ({
-//             value: j.id_jenis,
-//             label: j.nama_jenis
-//         }));
-
-//         return baseResponse.success(c, formattedJenis);
-//     } catch (e: unknown) {
-//         return baseResponse.error(c, `Error: ${e instanceof Error ? e.message : 'Unknown error'}`);
-//     }
-// } 
+    return baseResponse.deleted(c);
+  } catch (error) {
+    console.error("deleteLocation error:", error);
+    return baseResponse.error(c, "Internal Server Error", 500);
+  }
+};
