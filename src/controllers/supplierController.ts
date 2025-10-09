@@ -1,25 +1,34 @@
+// src/controllers/supplierController.ts
+
 import { Context } from "hono";
 import { prisma } from "../utils/prisma";
 import { baseResponse } from "../helpers/baseResponse";
 import { handlePaginate } from "../helpers/handlePaginate";
-import {
-  createLocationSchema,
-  CreateLocationType,
-  updateLocationSchema,
-  UpdateLocationType,
-} from "../validators/locationValidator";
 import { validateData } from "../validators/validator";
+import {
+  createSupplierSchema,
+  CreateSupplier,
+  updateSupplierSchema,
+  UpdateSupplier,
+} from "../validators/supplierValidator";
 
-export const getAllLocation = async (c: Context) => {
+export const getAllSuppliers = async (c: Context) => {
   try {
     const page = parseInt(c.req.query("page") || "1", 10);
     const perPage = parseInt(c.req.query("perPage") || "10", 10);
     const search = c.req.query("search") || "";
 
     const result = await handlePaginate(
-      prisma.locations,
-      {},
-      {},
+      prisma.suppliers,
+      {
+        supplier_name: {
+          contains: search,
+        },
+        deleted_at: null,
+      },
+      {
+        location: true,
+      },
       page,
       perPage
     );
@@ -33,18 +42,21 @@ export const getAllLocation = async (c: Context) => {
   }
 };
 
-export const getLocationById = async (c: Context) => {
+export const getSupplierById = async (c: Context) => {
   try {
     const id = c.req.param("id");
-    const location = await prisma.locations.findUnique({
-      where: { location_id: Number(id) },
+    const supplier = await prisma.suppliers.findFirst({
+      where: { supplier_id: Number(id), deleted_at: null },
+      include: {
+        location: true,
+      },
     });
 
-    if (!location) {
-      return baseResponse.error(c, "Location not found", 404);
+    if (!supplier) {
+      return baseResponse.error(c, "Supplier not found", 404);
     }
 
-    return baseResponse.show(c, location);
+    return baseResponse.show(c, supplier);
   } catch (e: unknown) {
     return baseResponse.error(
       c,
@@ -53,76 +65,70 @@ export const getLocationById = async (c: Context) => {
   }
 };
 
-export const createLocation = async (c: Context) => {
+export const createSupplier = async (c: Context) => {
   try {
     const user = c.get("user");
     if (!user?.user_id) return baseResponse.unauthorized(c);
 
-    const body: CreateLocationType = await c.req.json();
-    const { data, error } = validateData(createLocationSchema, body);
+    const body: CreateSupplier = await c.req.json();
+    const { data, error } = validateData(createSupplierSchema, body);
     if (error) return baseResponse.error(c, JSON.stringify(error), 400);
 
-    const location = await prisma.locations.create({
+    const supplier = await prisma.suppliers.create({
       data: { ...data, created_by: user.user_id },
     });
-    return baseResponse.created(c, location);
+    return baseResponse.created(c, supplier);
   } catch (_) {
     return baseResponse.error(c, "Internal Server Error");
   }
 };
 
-export const updateLocation = async (c: Context) => {
+export const updateSupplier = async (c: Context) => {
   try {
     const user = c.get("user");
     if (!user?.user_id) return baseResponse.unauthorized(c);
 
     const id = Number(c.req.param("id"));
-    if (isNaN(id)) return baseResponse.error(c, "Invalid location ID", 400);
+    if (isNaN(id)) return baseResponse.error(c, "Invalid supplier ID", 400);
 
-    const body: UpdateLocationType = await c.req.json();
-    const { data, error } = validateData(updateLocationSchema, body);
+    const body: UpdateSupplier = await c.req.json();
+    const { data, error } = validateData(updateSupplierSchema, body);
     if (error) return baseResponse.error(c, JSON.stringify(error), 400);
 
-    const existing = await prisma.locations.findFirst({
-      where: { location_id: id, deleted_at: null },
+    const existing = await prisma.suppliers.findFirst({
+      where: { supplier_id: id, deleted_at: null },
     });
-    if (!existing) return baseResponse.error(c, "Location not found", 404);
+    if (!existing) return baseResponse.error(c, "Supplier not found", 404);
 
-    const location = await prisma.locations.update({
-      where: { location_id: id },
+    const supplier = await prisma.suppliers.update({
+      where: { supplier_id: id },
       data: {
         ...data,
         updated_by: user.user_id,
       },
-      include: {
-        soil_type: {
-          select: { soil_type_id: true, soil_name: true },
-        },
-      },
     });
 
-    return baseResponse.updated(c, location);
+    return baseResponse.updated(c, supplier);
   } catch (error) {
-    console.error("updateLocation error:", error);
     return baseResponse.error(c, "Internal Server Error", 500);
   }
 };
 
-export const deleteLocation = async (c: Context) => {
+export const deleteSupplier = async (c: Context) => {
   try {
     const user = c.get("user");
     if (!user?.user_id) return baseResponse.unauthorized(c);
 
     const id = Number(c.req.param("id"));
-    if (isNaN(id)) return baseResponse.error(c, "Invalid location ID", 400);
+    if (isNaN(id)) return baseResponse.error(c, "Invalid supplier ID", 400);
 
-    const existing = await prisma.locations.findFirst({
-      where: { location_id: id, deleted_at: null },
+    const existing = await prisma.suppliers.findFirst({
+      where: { supplier_id: id, deleted_at: null },
     });
-    if (!existing) return baseResponse.error(c, "Location not found", 404);
+    if (!existing) return baseResponse.error(c, "Supplier not found", 404);
 
-    await prisma.locations.update({
-      where: { location_id: id },
+    await prisma.suppliers.update({
+      where: { supplier_id: id },
       data: {
         deleted_at: new Date(),
         deleted_by: user.user_id,
@@ -131,7 +137,6 @@ export const deleteLocation = async (c: Context) => {
 
     return baseResponse.deleted(c);
   } catch (error) {
-    console.error("deleteLocation error:", error);
     return baseResponse.error(c, "Internal Server Error", 500);
   }
 };

@@ -2,7 +2,7 @@ import { Context, Next } from "hono";
 import { verifyToken } from "../utils/jwt";
 import { baseResponse } from "../helpers/baseResponse";
 
-export const AuthMiddleware = async (c: Context, next: Next) => {
+export const authMiddleware = async (c: Context, next: Next) => {
   try {
     const authHeader = c.req.header("Authorization");
 

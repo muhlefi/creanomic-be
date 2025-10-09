@@ -1,11 +1,11 @@
 import { Hono } from "hono";
 import { login, logout, register } from "../controllers/authController";
-import { AuthMiddleware } from "../middlewares/authMiddleware";
+import { authMiddleware } from "../middlewares/authMiddleware";
 
 const router = new Hono();
 
 router.post("/register", register);
 router.post("/login", login);
-router.post("/logout", AuthMiddleware, logout);
+router.post("/logout", authMiddleware, logout);
 
 export const authRoutes = router;

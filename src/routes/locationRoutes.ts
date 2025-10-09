@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { AuthMiddleware } from "../middlewares/authMiddleware";
+import { authMiddleware } from "../middlewares/authMiddleware";
 import {
   createLocation,
   deleteLocation,
@@ -10,10 +10,10 @@ import {
 
 const router = new Hono();
 
-router.get("/", getAllLocation);
-router.get("/id", getLocationById);
-router.post("/", AuthMiddleware, createLocation);
-router.patch("/id", AuthMiddleware, updateLocation);
-router.delete("/", AuthMiddleware, deleteLocation);
+router.get("/", authMiddleware, getAllLocation);
+router.get("/id", authMiddleware, getLocationById);
+router.post("/", authMiddleware, createLocation);
+router.patch("/id", authMiddleware, updateLocation);
+router.delete("/", authMiddleware, deleteLocation);
 
 export const locationRoutes = router;
